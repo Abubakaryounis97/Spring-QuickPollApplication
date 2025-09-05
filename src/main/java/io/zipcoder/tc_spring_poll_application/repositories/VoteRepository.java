@@ -1,11 +1,10 @@
 package io.zipcoder.tc_spring_poll_application.repositories;
 
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
+import org.springframework.data.repository.CrudRepository;
 
 import io.zipcoder.tc_spring_poll_application.domain.Vote;
 
-@Repository
-public interface VoteRepository  extends JpaRepository<Vote, Long> {
-    
+public interface VoteRepository extends CrudRepository<Vote, Long> {
+    // No need to define any methods manually
+    // Spring Data JPA automatically provides save, findById, findAll, deleteById, etc.
 }

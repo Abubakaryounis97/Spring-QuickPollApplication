@@ -1,17 +1,12 @@
 package io.zipcoder.tc_spring_poll_application.controller;
 
 import java.net.URI;
+import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import io.zipcoder.tc_spring_poll_application.domain.Poll;
@@ -21,45 +16,53 @@ import io.zipcoder.tc_spring_poll_application.repositories.PollRepository;
 @RequestMapping("/polls")
 public class PollController {
 
-    private final PollRepository pollRepository;   // JPA creates implementation of this interface automatically
+    private final PollRepository pollRepository;
 
     @Autowired
-    public PollController(PollRepository pollRepository) { // inject the repository into the controller
+    public PollController(PollRepository pollRepository) {
         this.pollRepository = pollRepository;
     }
 
+    // GET /polls - Retrieve all polls
     @GetMapping
     public ResponseEntity<Iterable<Poll>> getAllPolls() {
-        Iterable<Poll> allPolls = pollRepository.findAll();
-        return new ResponseEntity<>(allPolls, HttpStatus.OK);
+        return new ResponseEntity<>(pollRepository.findAll(), HttpStatus.OK);
     }
 
+    // GET /polls/{pollId} - Retrieve a single poll
     @GetMapping("/{pollId}")
     public ResponseEntity<?> getPoll(@PathVariable Long pollId) {
-        Poll p = pollRepository.findOne(pollId);
-        return new ResponseEntity<>(p, HttpStatus.OK);
+        Optional<Poll> poll = pollRepository.findById(pollId);
+        return poll.map(value -> new ResponseEntity<>(value, HttpStatus.OK))
+                   .orElseGet(() -> new ResponseEntity<>(HttpStatus.NOT_FOUND));
     }
 
-
-    // post
-    @PostMapping("/polls")
+    // POST /polls - Create a new poll
+    @PostMapping
     public ResponseEntity<?> createPoll(@RequestBody Poll poll) {
-    // Save the poll to the database
-    poll = pollRepository.save(poll);
+        poll = pollRepository.save(poll);
 
-    // Build the URI for the new poll: /polls/{id}
-    URI newPollUri = ServletUriComponentsBuilder
-            .fromCurrentRequest()
-            .path("/{id}")
-            .buildAndExpand(poll.getId())
-            .toUri();
+        URI location = ServletUriComponentsBuilder
+                .fromCurrentRequest()
+                .path("/{id}")
+                .buildAndExpand(poll.getId())
+                .toUri();
 
-    // Set the Location header with the new poll URI
-    HttpHeaders responseHeaders = new HttpHeaders();
-    responseHeaders.setLocation(newPollUri);
+        return ResponseEntity.created(location).build();
+    }
 
-    // Return 201 Created with Location header
-    return new ResponseEntity<>(null, responseHeaders, HttpStatus.CREATED);
-}
+    // PUT /polls/{pollId} - Update an existing poll
+    @PutMapping("/{pollId}")
+    public ResponseEntity<?> updatePoll(@RequestBody Poll poll, @PathVariable Long pollId) {
+        poll.setId(pollId); // ensure the ID is correct
+        pollRepository.save(poll);
+        return new ResponseEntity<>(HttpStatus.OK);
+    }
 
+    // DELETE /polls/{pollId} - Delete a poll
+    @DeleteMapping("/{pollId}")
+    public ResponseEntity<?> deletePoll(@PathVariable Long pollId) {
+        pollRepository.deleteById(pollId);
+        return new ResponseEntity<>(HttpStatus.OK);
+    }
 }
